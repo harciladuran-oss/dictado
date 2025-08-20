@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Dictado a Google Sheets</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+    button { padding: 15px 30px; margin: 10px; font-size: 18px; }
+    #output { margin-top: 20px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h2>Dictado a Google Sheets (nombre, edad, ciudad)</h2>
+  <button id="startBtn">🎤 Empezar dictado</button>
+  <button id="stopBtn" disabled>⏹️ Detener dictado</button>
+  <div id="output">Haz clic en “Empezar dictado” y habla...</div>
+
+  <script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbw3_-tjEKN3viDVeytfBd6TZBkMlSjJP73SQtLE2uhYwYBTY-TubOc8UJrE7G2vw4ztSA/exec';
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn  = document.getElementById('stopBtn');
+    const output   = document.getElementById('output');
+
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'es-CO';
+    recognition.interimResults = false;
+    recognition.continuous = true;
+
+    async function enviar(texto) {
+      const fila = texto.split(',').map(x => x.trim());
+      output.innerText = `Enviando: ${fila.join(' | ')}`;
+      try {
+        const response = await fetch(scriptURL, {
+          method: 'POST',
+          body: JSON.stringify({ fila }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+        output.innerText = await response.text() + '\nHabla otra fila...';
+      } catch(err) {
+        output.innerText = 'Error enviando: ' + err.message;
+      }
+    }
+
+    recognition.onresult = e => {
+      const texto = e.results[e.results.length-1][0].transcript;
+      enviar(texto);
+    };
+
+    recognition.onerror = e => {
+      output.innerText = 'Error micrófono: ' + e.error;
+    };
+
+    startBtn.onclick = () => {
+      recognition.start();
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      output.innerText = '🎙️ Escuchando... Di: nombre, edad, ciudad';
+    };
+
+    stopBtn.onclick = () => {
+      recognition.stop();
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      output.innerText = '⏹️ Dictado detenido';
+    };
+  </script>
+</body>
+</html>
